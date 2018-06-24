@@ -124,7 +124,7 @@ where
     I: Stream<Item = char>,
     I::Error: ParseError<I::Item, I::Range, I::Position>,
 {
-    lex(many(parser(|input: &mut I| {
+    lex(many1(parser(|input: &mut I| {
         let (c, consumed) = try!(any().parse_lazy(input).into());
         if c.is_alphanumeric() || c == '_' {
             Ok((c, consumed))
@@ -139,14 +139,11 @@ where
     I: Stream<Item = char>,
     I::Error: ParseError<I::Item, I::Range, I::Position>,
 {
-    let field = (
-        optional(salmon_key()),
-        optional(lex(string(":="))),
-        json_value(),
-    ).map(|(key, _, value)| match key {
-        Some(key) => (key, value),
-        None => ("".to_owned(), value),
-    });
+    let field =
+        (optional((salmon_key(), lex(string(":=")))), json_value()).map(|(key, value)| match key {
+            Some((key, _)) => (key, value),
+            None => ("".to_owned(), value),
+        });
     let fields = sep_by(field, lex(char(',')));
     between(lex(char('[')), lex(char(']')), fields)
         .map(Value::Object)
@@ -194,7 +191,7 @@ where
 
 fn main() {
     let input = r#"[
-        object := ["value1", "value2"],
+        object := ["value1", "value2", key1 := "key_value"],
         number := 3.14,
         small_number := 0.59,
         int := -100,
@@ -205,9 +202,10 @@ fn main() {
         null  := null,
         salmon_key1  := true,
         "non_key_value1",
-        "non_key_value2"
-
+        "non_key_value2",
+        string := "string"
     ]"#;
     let result = json_value().easy_parse(input);
+
     println!("{:?}", result);
 }
