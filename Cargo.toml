@@ -1,0 +1,7 @@
+[package]
+name = "combine-play"
+version = "0.1.0"
+authors = ["kenkoooo <kenkou.n@gmail.com>"]
+
+[dependencies]
+combine = "3.3.2"
