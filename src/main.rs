@@ -1,6 +1,6 @@
 extern crate combine;
 
-use combine::error::{Consumed, ConsumedResult, ParseError, Tracked};
+use combine::error::{Consumed, ConsumedResult, ParseError};
 use combine::lib::marker::PhantomData;
 use combine::{Parser, Stream, StreamOnce};
 
@@ -18,6 +18,7 @@ enum Value {
     Bool(bool),
     Null,
     Object(Vec<(String, Value)>),
+    Variable(String),
 }
 
 fn lex<P>(p: P) -> impl Parser<Input = P::Input, Output = P::Output>
@@ -180,34 +181,14 @@ where
         _: &mut Self::PartialState,
     ) -> ConsumedResult<Value, I> {
         let ref mut state = Default::default();
-        {
-            choice((
-                json_string().map(Value::String),
-                object(),
-                number().map(Value::Number),
-                lex(string("false").map(|_| Value::Bool(false))),
-                lex(string("true").map(|_| Value::Bool(true))),
-                lex(string("null").map(|_| Value::Null)),
-            ))
-        }.parse_partial(input, state)
-    }
-
-    #[inline]
-    fn add_error(&mut self, errors: &mut Tracked<<I as StreamOnce>::Error>) {
-        let mut parser = {
-            choice((
-                json_string().map(Value::String),
-                object(),
-                number().map(Value::Number),
-                lex(string("false").map(|_| Value::Bool(false))),
-                lex(string("true").map(|_| Value::Bool(true))),
-                lex(string("null").map(|_| Value::Null)),
-            ))
-        };
-        {
-            let _: &mut Parser<Input = I, Output = Value, PartialState = _> = &mut parser;
-        }
-        parser.add_error(errors)
+        choice((
+            json_string().map(Value::String),
+            object(),
+            number().map(Value::Number),
+            lex(string("false").map(|_| Value::Bool(false))),
+            lex(string("true").map(|_| Value::Bool(true))),
+            lex(string("null").map(|_| Value::Null)),
+        )).parse_partial(input, state)
     }
 }
 
