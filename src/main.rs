@@ -1,7 +1,5 @@
 extern crate combine;
 
-use std::collections::HashMap;
-
 use combine::error::{Consumed, ConsumedResult, ParseError, Tracked};
 use combine::lib::marker::PhantomData;
 use combine::{Parser, Stream, StreamOnce};
@@ -19,8 +17,7 @@ enum Value {
     String(String),
     Bool(bool),
     Null,
-    Object(HashMap<String, Value>),
-    Array(Vec<Value>),
+    Object(Vec<(String, Value)>),
 }
 
 fn lex<P>(p: P) -> impl Parser<Input = P::Input, Output = P::Output>
@@ -121,14 +118,29 @@ where
     between(lex(char('"')), lex(char('"')), many(json_char())).expected("string")
 }
 
+fn salmon_key<I>() -> impl Parser<Input = I, Output = String>
+where
+    I: Stream<Item = char>,
+    I::Error: ParseError<I::Item, I::Range, I::Position>,
+{
+    lex(many(parser(|input: &mut I| {
+        let (c, consumed) = try!(any().parse_lazy(input).into());
+        if c.is_alphanumeric() || c == '_' {
+            Ok((c, consumed))
+        } else {
+            Err(Consumed::Empty(I::Error::empty(input.position()).into()))
+        }
+    })))
+}
+
 fn object<I>() -> impl Parser<Input = I, Output = Value>
 where
     I: Stream<Item = char>,
     I::Error: ParseError<I::Item, I::Range, I::Position>,
 {
-    let field = (json_string(), lex(string(":=")), json_value()).map(|t| (t.0, t.2));
+    let field = (salmon_key(), lex(string(":=")), json_value()).map(|t| (t.0, t.2));
     let fields = sep_by(field, lex(char(',')));
-    between(lex(char('{')), lex(char('}')), fields)
+    between(lex(char('[')), lex(char(']')), fields)
         .map(Value::Object)
         .expected("object")
 }
@@ -162,15 +174,9 @@ where
     ) -> ConsumedResult<Value, I> {
         let ref mut state = Default::default();
         {
-            let array = between(
-                lex(char('[')),
-                lex(char(']')),
-                sep_by(json_value(), lex(char(','))),
-            ).map(Value::Array);
             choice((
                 json_string().map(Value::String),
                 object(),
-                array,
                 number().map(Value::Number),
                 lex(string("false").map(|_| Value::Bool(false))),
                 lex(string("true").map(|_| Value::Bool(true))),
@@ -182,15 +188,9 @@ where
     #[inline]
     fn add_error(&mut self, errors: &mut Tracked<<I as StreamOnce>::Error>) {
         let mut parser = {
-            let array = between(
-                lex(char('[')),
-                lex(char(']')),
-                sep_by(json_value(), lex(char(','))),
-            ).map(Value::Array);
             choice((
                 json_string().map(Value::String),
                 object(),
-                array,
                 number().map(Value::Number),
                 lex(string("false").map(|_| Value::Bool(false))),
                 lex(string("true").map(|_| Value::Bool(true))),
@@ -205,23 +205,17 @@ where
 }
 
 fn main() {
-    // let input = r#"{
-    //     "array":= [1, ""],
-    //     "object":= {},
-    //     "number":= 3.14,
-    //     "small_number":= 0.59,
-    //     "int":= -100,
-    //     "exp":= -1e2,
-    //     "exp_neg":= 23e-2,
-    //     "true":= true,
-    //     "false"  := false,
-    //     "null" := null
-    // }"#;
-    let input = r#"
-    {
-        "array" := ["a", "b"]
-    }
-    "#;
+    let input = r#"[
+        object := [],
+        number := 3.14,
+        small_number := 0.59,
+        int := -100,
+        exp := -1e2,
+        exp_neg := 23e-2,
+        true := true,
+        false   := false,
+        null  := null
+    ]"#;
     let result = json_value().easy_parse(input);
     println!("{:?}", result);
 }
