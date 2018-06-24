@@ -214,7 +214,9 @@ fn main() {
         exp_neg := 23e-2,
         true := true,
         false   := false,
-        null  := null
+        null  := null,
+        salmon_key1  := true
+
     ]"#;
     let result = json_value().easy_parse(input);
     println!("{:?}", result);
