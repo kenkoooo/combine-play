@@ -118,7 +118,7 @@ where
     I: Stream<Item = char>,
     I::Error: ParseError<I::Item, I::Range, I::Position>,
 {
-    between(char('"'), lex(char('"')), many(json_char())).expected("string")
+    between(lex(char('"')), lex(char('"')), many(json_char())).expected("string")
 }
 
 fn object<I>() -> impl Parser<Input = I, Output = Value>
@@ -126,7 +126,7 @@ where
     I: Stream<Item = char>,
     I::Error: ParseError<I::Item, I::Range, I::Position>,
 {
-    let field = (json_string(), lex(char(':')), json_value()).map(|t| (t.0, t.2));
+    let field = (json_string(), lex(string(":=")), json_value()).map(|t| (t.0, t.2));
     let fields = sep_by(field, lex(char(',')));
     between(lex(char('{')), lex(char('}')), fields)
         .map(Value::Object)
@@ -139,12 +139,12 @@ where
     I: Stream<Item = char>,
     I::Error: ParseError<I::Item, I::Range, I::Position>,
 {
-    json_value_()
+    JsonValueParser(PhantomData)
 }
 
-struct JsonValue<I>(PhantomData<fn(I) -> Value>);
+struct JsonValueParser<I>(PhantomData<fn(I) -> Value>);
 
-impl<I> Parser for JsonValue<I>
+impl<I> Parser for JsonValueParser<I>
 where
     <I as StreamOnce>::Error:
         ParseError<<I as StreamOnce>::Item, <I as StreamOnce>::Range, <I as StreamOnce>::Position>,
@@ -153,6 +153,7 @@ where
     type Input = I;
     type Output = Value;
     type PartialState = ();
+
     #[inline]
     fn parse_partial(
         &mut self,
@@ -203,28 +204,24 @@ where
     }
 }
 
-#[inline(always)]
-fn json_value_<I>() -> JsonValue<I>
-where
-    <I as StreamOnce>::Error:
-        ParseError<<I as StreamOnce>::Item, <I as StreamOnce>::Range, <I as StreamOnce>::Position>,
-    I: Stream<Item = char>,
-{
-    JsonValue(PhantomData)
-}
 fn main() {
     let input = r#"{
-    "array": [1, ""],
-    "object": {},
-    "number": 3.14,
-    "small_number": 0.59,
-    "int": -100,
-    "exp": -1e2,
-    "exp_neg": 23e-2,
-    "true": true,
-    "false"  : false,
-    "null" : null
-}"#;
+        "array":= [1, ""],
+        "object":= {},
+        "number":= 3.14,
+        "small_number":= 0.59,
+        "int":= -100,
+        "exp":= -1e2,
+        "exp_neg":= 23e-2,
+        "true":= true,
+        "false"  := false,
+        "null" := null
+    }"#;
+    // let input = r#"
+    // {
+    //     array := ["a", "b"]
+    // }
+    // "#;
     let result = json_value().easy_parse(input);
     println!("{:?}", result);
 }
