@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use combine::error::{Consumed, ConsumedResult, ParseError, Tracked};
 use combine::lib::marker::PhantomData;
-use combine::StreamOnce::{Item, Position, Range};
 use combine::{Parser, Stream, StreamOnce};
 
 use combine::parser::char::{char, digit, spaces, string};
@@ -28,7 +27,11 @@ fn lex<P>(p: P) -> impl Parser<Input = P::Input, Output = P::Output>
 where
     P: Parser,
     P::Input: Stream<Item = char>,
-    <P::Input as StreamOnce>::Error: ParseError<Item, Range, Position>,
+    <P::Input as StreamOnce>::Error: ParseError<
+        <P::Input as StreamOnce>::Item,
+        <P::Input as StreamOnce>::Range,
+        <P::Input as StreamOnce>::Position,
+    >,
 {
     p.skip(spaces())
 }
