@@ -205,23 +205,23 @@ where
 }
 
 fn main() {
-    let input = r#"{
-        "array":= [1, ""],
-        "object":= {},
-        "number":= 3.14,
-        "small_number":= 0.59,
-        "int":= -100,
-        "exp":= -1e2,
-        "exp_neg":= 23e-2,
-        "true":= true,
-        "false"  := false,
-        "null" := null
-    }"#;
-    // let input = r#"
-    // {
-    //     array := ["a", "b"]
-    // }
-    // "#;
+    // let input = r#"{
+    //     "array":= [1, ""],
+    //     "object":= {},
+    //     "number":= 3.14,
+    //     "small_number":= 0.59,
+    //     "int":= -100,
+    //     "exp":= -1e2,
+    //     "exp_neg":= 23e-2,
+    //     "true":= true,
+    //     "false"  := false,
+    //     "null" := null
+    // }"#;
+    let input = r#"
+    {
+        "array" := ["a", "b"]
+    }
+    "#;
     let result = json_value().easy_parse(input);
     println!("{:?}", result);
 }
