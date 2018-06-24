@@ -213,7 +213,7 @@ where
 
 fn main() {
     let input = r#"[
-        object := [],
+        object := ["value1", "value2"],
         number := 3.14,
         small_number := 0.59,
         int := -100,
@@ -222,7 +222,9 @@ fn main() {
         true := true,
         false   := false,
         null  := null,
-        salmon_key1  := true
+        salmon_key1  := true,
+        "non_key_value1",
+        "non_key_value2"
 
     ]"#;
     let result = json_value().easy_parse(input);
