@@ -138,7 +138,14 @@ where
     I: Stream<Item = char>,
     I::Error: ParseError<I::Item, I::Range, I::Position>,
 {
-    let field = (salmon_key(), lex(string(":=")), json_value()).map(|t| (t.0, t.2));
+    let field = (
+        optional(salmon_key()),
+        optional(lex(string(":="))),
+        json_value(),
+    ).map(|(key, _, value)| match key {
+        Some(key) => (key, value),
+        None => ("".to_owned(), value),
+    });
     let fields = sep_by(field, lex(char(',')));
     between(lex(char('[')), lex(char(']')), fields)
         .map(Value::Object)
