@@ -2,7 +2,7 @@ extern crate combine;
 
 use combine::error::{Consumed, ConsumedResult, ParseError};
 use combine::lib::marker::PhantomData;
-use combine::{Parser, Stream, StreamOnce};
+use combine::{not_followed_by, try, Parser, Stream, StreamOnce};
 
 use combine::parser::char::{char, digit, spaces, string};
 use combine::parser::choice::{choice, optional};
@@ -150,6 +150,18 @@ where
         .expected("object")
 }
 
+fn multi_line_string<I>() -> impl Parser<Input = I, Output = String>
+where
+    I: Stream<Item = char>,
+    I::Error: ParseError<I::Item, I::Range, I::Position>,
+{
+    between(
+        lex(string("??")),
+        lex(string("??")),
+        many::<String, _>(try(not_followed_by(string("??")).with(any()))),
+    ).expected("multi line string")
+}
+
 #[inline(always)]
 fn json_value<I>() -> impl Parser<Input = I, Output = Value>
 where
@@ -208,4 +220,18 @@ fn main() {
     let result = json_value().easy_parse(input);
 
     println!("{:?}", result);
+
+    println!(
+        "{:?}",
+        multi_line_string().easy_parse(
+            r#"??
+    aaaa
+    a
+    a
+    
+    
+    aaaaa
+    ??"#
+        )
+    );
 }
