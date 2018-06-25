@@ -19,6 +19,13 @@ enum Value {
     Null,
     Object(Vec<(String, Value)>),
     Variable(String),
+    Concat(Vec<StringValue>),
+}
+
+#[derive(PartialEq, Debug)]
+enum StringValue {
+    String(String),
+    Variable(String),
 }
 
 fn lex<P>(p: P) -> impl Parser<Input = P::Input, Output = P::Output>
@@ -119,12 +126,16 @@ where
     between(lex(char('"')), lex(char('"')), many(json_char())).expected("string")
 }
 
-fn concat_string<I>() -> impl Parser<Input = I, Output = String>
+fn concat_string<I>() -> impl Parser<Input = I, Output = Value>
 where
     I: Stream<Item = char>,
     I::Error: ParseError<I::Item, I::Range, I::Position>,
 {
-    sep_by(json_string().or(multi_line_string()), lex(char('~')))
+    let string_field = json_string()
+        .or(multi_line_string())
+        .map(StringValue::String);
+    let variable_field = salmon_key().map(StringValue::Variable);
+    sep_by(string_field.or(variable_field), lex(char('~'))).map(Value::Concat)
 }
 
 fn salmon_key<I>() -> impl Parser<Input = I, Output = String>
@@ -207,7 +218,7 @@ where
             lex(string("false").map(|_| Value::Bool(false))),
             lex(string("true").map(|_| Value::Bool(true))),
             lex(string("null").map(|_| Value::Null)),
-            concat_string().map(Value::String),
+            concat_string(),
         )).parse_partial(input, state)
     }
 }
@@ -239,7 +250,8 @@ new line??,
         c
         d?? ~ "e",
         "aaa",
-        aaa
+        aaa,
+        concat_string_variable := aaa ~ "aaa"
     ]"#;
     let result = json_value().easy_parse(input);
 
