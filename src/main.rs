@@ -119,6 +119,14 @@ where
     between(lex(char('"')), lex(char('"')), many(json_char())).expected("string")
 }
 
+fn concat_string<I>() -> impl Parser<Input = I, Output = String>
+where
+    I: Stream<Item = char>,
+    I::Error: ParseError<I::Item, I::Range, I::Position>,
+{
+    sep_by(json_string().or(multi_line_string()), lex(char('~')))
+}
+
 fn salmon_key<I>() -> impl Parser<Input = I, Output = String>
 where
     I: Stream<Item = char>,
@@ -191,13 +199,12 @@ where
     ) -> ConsumedResult<Value, I> {
         let ref mut state = Default::default();
         choice((
-            json_string().map(Value::String),
             object(),
             number().map(Value::Number),
             lex(string("false").map(|_| Value::Bool(false))),
             lex(string("true").map(|_| Value::Bool(true))),
             lex(string("null").map(|_| Value::Null)),
-            multi_line_string().map(Value::String),
+            concat_string().map(Value::String),
         )).parse_partial(input, state)
     }
 }
@@ -223,9 +230,27 @@ new line??,
         multi_line_string2 := ??
         multi
         line
-        string??
+        string??,
+        concat_string1 := "a" ~ "b",
+        multi_line_string2 := "a" ~ "b" ~ ??
+        c
+        d?? ~ "e"
     ]"#;
     let result = json_value().easy_parse(input);
 
     println!("{:?}", result);
+
+    println!("{:?}", concat_string().easy_parse("\"aaaaaa\""));
+    println!(
+        "{:?}",
+        concat_string().easy_parse("\"aaaaaa\" ~ \"aaaaaa\"")
+    );
+    println!(
+        "{:?}",
+        concat_string().easy_parse(
+            r#""aaaaaaaa" ~ "bbbbbb" ~ ??
+cccccccc
+ddddddd?? ~ "eeeeeeeeee""#
+        )
+    );
 }
