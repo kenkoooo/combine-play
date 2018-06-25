@@ -147,11 +147,14 @@ where
     I: Stream<Item = char>,
     I::Error: ParseError<I::Item, I::Range, I::Position>,
 {
-    let field =
+    let field = try(
         (optional((salmon_key(), lex(string(":=")))), json_value()).map(|(key, value)| match key {
             Some((key, _)) => (key, value),
             None => ("".to_owned(), value),
-        });
+        }),
+    ).or(try(
+        (salmon_key()).map(|variable| ("".to_owned(), Value::Variable(variable)))
+    ));
     let fields = sep_by(field, lex(char(',')));
     between(lex(char('[')), lex(char(']')), fields)
         .map(Value::Object)
@@ -234,7 +237,9 @@ new line??,
         concat_string1 := "a" ~ "b",
         multi_line_string2 := "a" ~ "b" ~ ??
         c
-        d?? ~ "e"
+        d?? ~ "e",
+        "aaa",
+        aaa
     ]"#;
     let result = json_value().easy_parse(input);
 
@@ -251,6 +256,14 @@ new line??,
             r#""aaaaaaaa" ~ "bbbbbb" ~ ??
 cccccccc
 ddddddd?? ~ "eeeeeeeeee""#
+        )
+    );
+    println!(
+        "{:?}",
+        json_value().easy_parse(
+            r#"[
+        aaa
+    ]"#
         )
     );
 }
