@@ -14,10 +14,9 @@ use combine::parser::sequence::between;
 #[derive(PartialEq, Debug)]
 enum Value {
     Number(f64),
-    String(String),
     Bool(bool),
     Null,
-    Object(Vec<(String, Value)>),
+    Object(Vec<(Option<String>, Value)>),
     Variable(String),
     Concat(Vec<StringValue>),
 }
@@ -160,11 +159,11 @@ where
 {
     let field = try(
         (optional((salmon_key(), lex(string(":=")))), json_value()).map(|(key, value)| match key {
-            Some((key, _)) => (key, value),
-            None => ("".to_owned(), value),
+            Some((key, _)) => (Some(key), value),
+            None => (None, value),
         }),
     ).or(try(
-        (salmon_key()).map(|variable| ("".to_owned(), Value::Variable(variable)))
+        (salmon_key()).map(|variable| (None, Value::Variable(variable)))
     ));
     let fields = sep_by(field, lex(char(',')));
     between(lex(char('[')), lex(char(']')), fields)
