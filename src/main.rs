@@ -197,6 +197,7 @@ where
             lex(string("false").map(|_| Value::Bool(false))),
             lex(string("true").map(|_| Value::Bool(true))),
             lex(string("null").map(|_| Value::Null)),
+            multi_line_string().map(Value::String),
         )).parse_partial(input, state)
     }
 }
@@ -215,23 +216,16 @@ fn main() {
         salmon_key1  := true,
         "non_key_value1",
         "non_key_value2",
-        string := "string"
+        string := "string",
+        multi_line_string := ??
+a        m
+new line??,
+        multi_line_string2 := ??
+        multi
+        line
+        string??
     ]"#;
     let result = json_value().easy_parse(input);
 
     println!("{:?}", result);
-
-    println!(
-        "{:?}",
-        multi_line_string().easy_parse(
-            r#"??
-    aaaa
-    a
-    a
-    
-    
-    aaaaa
-    ??"#
-        )
-    );
 }
